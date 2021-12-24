@@ -1,0 +1,9 @@
+.xt_rip*
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.cmd
+*.order
+*.symvers

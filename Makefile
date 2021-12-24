@@ -1,5 +1,6 @@
 obj-m := xt_rip.o
 CC = gcc -Wall
+CFLAGS = --std=C99
 ver := $(shell uname -r)
 KDIR := /lib/modules/$(ver)/build
 PWD := $(shell pwd)

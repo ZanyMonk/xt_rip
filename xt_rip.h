@@ -38,4 +38,9 @@ static struct kprobe kp = {
 
 const char MARKER[] = XTRIP_MARKER;
 const size_t MARKER_SIZE = sizeof MARKER - 1;
-const size_t BUFFER_SIZE = 1024;
+
+#ifndef XTRIP_BUFFER_SIZE
+#define XTRIP_BUFFER_SIZE 768
+#endif
+
+const size_t BUFFER_SIZE = XTRIP_BUFFER_SIZE;
